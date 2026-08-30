@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>누가누가 빠를까? 히라가나 짝 맞추기!</title>
+  
+  <!-- Google Fonts for cute Korean typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Firebase SDK (v9) via CDN -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #FFF9E6;
+      --card-jp-bg: #E3F2FD;
+      --card-jp-border: #90CAF9;
+      --card-kr-bg: #FFF0F5;
+      --card-kr-border: #FFB6C1;
+      --card-selected: #FFE082;
+      --card-matched: #C8E6C9;
+      --primary-color: #FF6B81;
+      --secondary-color: #4D96FF;
+      --accent-color: #FFD93D;
+      --text-color: #2D3436;
+      --shadow-color: rgba(0, 0, 0, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      font-family: 'Jua', 'Nanum Gothic', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-color);
+      background-image: radial-gradient(#FFECB3 2px, transparent 2px);
+      background-size: 24px 24px;
+      color: var(--text-color);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* 화면 하단 고정 희미한 워터마크 */
+    .watermark-footer {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(45, 52, 54, 0.25);
+      pointer-events: none;
+      user-select: none;
+      z-index: 9999;
+      letter-spacing: 1px;
+    }
+
+    /* Screen Views */
+    .screen {
+      display: none;
+      width: 100%;
+      max-width: 800px;
+      padding: 20px;
+      padding-bottom: 40px;
+      flex-direction: column;
+      align-items: center;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Main Title */
+    .game-title {
+      font-size: 2.8rem;
+      color: var(--primary-color);
+      text-shadow: 3px 3px 0px #FFF, 6px 6px 0px var(--accent-color);
+      margin: 10px 0 20px 0;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+
+    /* Input & Buttons */
+    .input-box {
+      background: white;
+      padding: 20px 30px;
+      border-radius: 24px;
+      box-shadow: 0 10px 25px var(--shadow-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      width: 100%;
+      max-width: 450px;
+      border: 4px solid #FFECB3;
+    }
+
+    .input-box label {
+      font-size: 1.3rem;
+      color: #555;
+    }
+
+    .name-input {
+      width: 100%;
+      padding: 12px 20px;
+      font-size: 1.4rem;
+      border: 3px solid var(--secondary-color);
+      border-radius: 16px;
+      text-align: center;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .name-input:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 10px rgba(255, 107, 129, 0.3);
+    }
+
+    .btn {
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 14px 36px;
+      font-size: 1.5rem;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 6px 0px #D63031;
+      transition: all 0.1s;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0px #D63031;
+    }
+
+    .btn-secondary {
+      background: var(--secondary-color);
+      box-shadow: 0 6px 0px #0984E3;
+    }
+
+    .btn-secondary:active {
+      box-shadow: 0 2px 0px #0984E3;
+    }
+
+    /* Leaderboard Card */
+    .leaderboard-card {
+      background: white;
+      border-radius: 24px;
+      padding: 20px;
+      width: 100%;
+      max-width: 550px;
+      margin-top: 25px;
+      box-shadow: 0 10px 25px var(--shadow-color);
+      border: 4px solid #E1F5FE;
+    }
+
+    .leaderboard-title {
+      font-size: 1.5rem;
+      color: var(--secondary-color);
+      text-align: center;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .ranking-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+
+    .ranking-table th {
+      background: #E3F2FD;
+      padding: 10px;
+      font-size: 1.1rem;
+      color: #1976D2;
+      border-radius: 10px;
+    }
+
+    .ranking-table td {
+      padding: 10px;
+      font-size: 1.1rem;
+      border-bottom: 1px dashed #EEE;
+    }
+
+    .ranking-table tr.my-score {
+      background-color: #FFF9C4;
+      font-weight: bold;
+    }
+
+    .rank-badge {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      line-height: 28px;
+      border-radius: 50%;
+      background: #E0E0E0;
+      color: #333;
+      font-size: 0.95rem;
+      font-weight: bold;
+    }
+
+    .rank-1 { background: #FFD700; color: #FFF; text-shadow: 1px 1px 0 #B8860B; }
+    .rank-2 { background: #C0C0C0; color: #FFF; text-shadow: 1px 1px 0 #708090; }
+    .rank-3 { background: #CD7F32; color: #FFF; text-shadow: 1px 1px 0 #8B4513; }
+
+    /* HUD Bar for Game Screen */
+    .hud-bar {
+      width: 100%;
+      max-width: 700px;
+      background: white;
+      border-radius: 20px;
+      padding: 15px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 8px 20px var(--shadow-color);
+      margin-bottom: 20px;
+      border: 3px solid #FFE082;
+    }
+
+    .hud-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .hud-label {
+      font-size: 0.95rem;
+      color: #888;
+    }
+
+    .hud-value {
+      font-size: 1.6rem;
+      color: var(--primary-color);
+      font-weight: bold;
+    }
+
+    .hud-value.timer {
+      color: #E67E22;
+      font-family: monospace;
+      font-weight: bold;
+      letter-spacing: -1px;
+    }
+
+    /* Cards Grid */
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      width: 100%;
+      max-width: 650px;
+      margin: 0 auto;
+    }
+
+    .card {
+      aspect-ratio: 1 / 1;
+      background: white;
+      border-radius: 18px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 2.2rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 6px 12px var(--shadow-color);
+      transition: transform 0.15s ease, background-color 0.2s, border-color 0.2s;
+      border: 4px solid transparent;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card.jp {
+      background-color: var(--card-jp-bg);
+      border-color: var(--card-jp-border);
+      color: #0D47A1;
+    }
+
+    .card.kr {
+      background-color: var(--card-kr-bg);
+      border-color: var(--card-kr-border);
+      color: #C2185B;
+    }
+
+    .card:active {
+      transform: scale(0.95);
+    }
+
+    .card.selected {
+      background-color: var(--card-selected) !important;
+      border-color: #FFA000 !important;
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(255, 160, 0, 0.5);
+      z-index: 2;
+    }
+
+    .card.matched {
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      transform: scale(0.5);
+    }
+
+    .card.wrong {
+      animation: shake 0.4s ease-in-out;
+      border-color: #FF5252 !important;
+      background-color: #FFEBEE !important;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+
+    /* Countdown Modal */
+    .countdown-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      flex-direction: column;
+    }
+
+    .countdown-overlay.active {
+      display: flex;
+    }
+
+    .countdown-number {
+      font-size: 8rem;
+      color: var(--accent-color);
+      text-shadow: 0 0 30px var(--accent-color);
+    }
+
+    .countdown-anim {
+      animation: popIn 0.9s ease forwards;
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.3); opacity: 0; }
+      50% { transform: scale(1.2); opacity: 1; }
+      80% { transform: scale(1.0); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.8; }
+    }
+
+    /* Result Screen Specifics */
+    .result-summary {
+      background: white;
+      border-radius: 24px;
+      padding: 25px;
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 10px 25px var(--shadow-color);
+      border: 4px solid var(--accent-color);
+      margin-bottom: 20px;
+    }
+
+    .result-score-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .result-score-item {
+      background: #FFFDE7;
+      padding: 15px;
+      border-radius: 16px;
+      border: 2px solid #FFE082;
+    }
+
+    .result-score-val {
+      font-size: 2rem;
+      color: var(--primary-color);
+      font-weight: bold;
+    }
+
+    /* Responsive adjustment for tablets */
+    @media (max-width: 600px) {
+      .game-title { font-size: 2.1rem; }
+      .grid-container { gap: 8px; }
+      .card { font-size: 1.7rem; border-radius: 12px; }
+      .hud-value { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. Main Screen -->
+  <div id="mainScreen" class="screen active">
+    <h1 class="game-title">누가누가 빠를까?<br>히라가나 짝 맞추기</h1>
+
+    <div class="input-box">
+      <label for="playerName">플레이어 이름을 입력해 주세요!</label>
+      <input type="text" id="playerName" class="name-input" placeholder="이름 입력 (예: 임동방)" maxlength="10">
+      <button class="btn" onclick="startCountdown()">🎮 게임 시작!</button>
+    </div>
+
+    <div class="leaderboard-card">
+      <div class="leaderboard-title">🏆 명예의 전당 (TOP 10)</div>
+      <table class="ranking-table">
+        <thead>
+          <tr>
+            <th>순위</th>
+            <th>이름</th>
+            <th>맞춘 짝</th>
+            <th>소요시간</th>
+          </tr>
+        </thead>
+        <tbody id="mainRankingBody">
+          <!-- Dynamically populated -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 2. Game Screen -->
+  <div id="gameScreen" class="screen">
+    <div class="hud-bar">
+      <div class="hud-item">
+        <span class="hud-label">스테이지</span>
+        <span id="hudStage" class="hud-value">1 / 6</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">맞춘 짝</span>
+        <span id="hudScore" class="hud-value">0 / 46</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">남은 시간</span>
+        <span id="hudTimer" class="hud-value timer">100.00초</span>
+      </div>
+    </div>
+
+    <div id="cardGrid" class="grid-container">
+      <!-- Cards rendered here -->
+    </div>
+  </div>
+
+  <!-- 3. Result Screen -->
+  <div id="resultScreen" class="screen">
+    <h1 class="game-title">🎉 게임 종료! 🎉</h1>
+
+    <div class="result-summary">
+      <h2 id="resultPlayerName" style="margin: 0; color: #333;">- 님의 기록 -</h2>
+      <div class="result-score-grid">
+        <div class="result-score-item">
+          <div style="color: #666; font-size: 0.95rem;">맞춘 짝 갯수</div>
+          <div id="resultMatchedCount" class="result-score-val">0개</div>
+        </div>
+        <div class="result-score-item">
+          <div style="color: #666; font-size: 0.95rem;">총 소요 시간</div>
+          <div id="resultTimeUsed" class="result-score-val">0.00초</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-secondary" onclick="resetToMain()">🔄 다시 도전하기</button>
+
+    <div class="leaderboard-card">
+      <div class="leaderboard-title">🏆 전체 랭킹 (TOP 20)</div>
+      <table class="ranking-table">
+        <thead>
+          <tr>
+            <th>순위</th>
+            <th>이름</th>
+            <th>맞춘 짝</th>
+            <th>소요시간</th>
+          </tr>
+        </thead>
+        <tbody id="resultRankingBody">
+          <!-- Dynamically populated -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Countdown Overlay -->
+  <div id="countdownOverlay" class="countdown-overlay">
+    <div id="countdownText" class="countdown-number">3</div>
+  </div>
+
+  <!-- 화면 하단 고정 워터마크 -->
+  <div class="watermark-footer">Made by ハン先生</div>
+
+  <script>
+    /* ==========================================
+       1. DATABASE (46 PAIRS)
+       ========================================== */
+    const HIRAGANA_DATABASE = [
+      { jp: 'あ', kr: '아' }, { jp: 'い', kr: '이' }, { jp: 'う', kr: '우' }, { jp: 'え', kr: '에' }, { jp: 'お', kr: '오(あ행)' },
+      { jp: 'か', kr: '카' }, { jp: 'き', kr: '키' }, { jp: 'く', kr: '쿠' }, { jp: 'け', kr: '케' }, { jp: 'こ', kr: '코' },
+      { jp: 'さ', kr: '사' }, { jp: 'し', kr: '시' }, { jp: 'す', kr: '스' }, { jp: 'せ', kr: '세' }, { jp: 'そ', kr: '소' },
+      { jp: 'た', kr: '타' }, { jp: 'ち', kr: '치' }, { jp: 'つ', kr: '쓰' }, { jp: 'て', kr: '테' }, { jp: 'と', kr: '토' },
+      { jp: 'な', kr: '나' }, { jp: 'に', kr: '니' }, { jp: 'ぬ', kr: '누' }, { jp: 'ね', kr: '네' }, { jp: 'の', kr: '노' },
+      { jp: 'は', kr: '하' }, { jp: 'ひ', kr: '히' }, { jp: 'ふ', kr: '후' }, { jp: 'へ', kr: '헤' }, { jp: 'ほ', kr: '호' },
+      { jp: 'ま', kr: '마' }, { jp: 'み', kr: '미' }, { jp: 'む', kr: '무' }, { jp: 'め', kr: '메' }, { jp: 'も', kr: '모' },
+      { jp: 'や', kr: '야' }, { jp: 'ゆ', kr: '유' }, { jp: 'よ', kr: '요' },
+      { jp: 'ら', kr: '라' }, { jp: 'り', kr: '리' }, { jp: 'る', kr: '루' }, { jp: 'れ', kr: '레' }, { jp: 'ろ', kr: '로' },
+      { jp: 'わ', kr: '와' }, { jp: 'を', kr: '오(わ행)' }, { jp: 'ん', kr: '응' }
+    ];
+
+    /* ==========================================
+       2. FIREBASE CONFIGURATION (REPLACE WITH YOUR KEYS)
+       ========================================== */
+    const firebaseConfig = {
+     apiKey: "AIzaSyBVs3qhWhQoUWmwzdMRZf7AHNp3g8e11fw",
+     authDomain: "jp-c833a.firebaseapp.com",
+     databaseURL: "https://jp-c833a-default-rtdb.firebaseio.com",
+     projectId: "jp-c833a",
+     storageBucket: "jp-c833a.firebasestorage.app",
+     messagingSenderId: "812699242278",
+     appId: "1:812699242278:web:b43cef481dde9450f77be7"
+   };
+
+    let db = null;
+    let isFirebaseReady = false;
+
+    try {
+      if (firebaseConfig.apiKey !== "AIzaSyBVs3qhWhQoUWmwzdMRZf7AHNp3g8e11fw") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        isFirebaseReady = true;
+      }
+    } catch (e) {
+      console.warn("Firebase initialized in LocalStorage mode:", e);
+    }
+
+    /* ==========================================
+       3. GAME STATE VARIABLES
+       ========================================== */
+    const TIME_LIMIT = 100.0; // 100 seconds limit
+    let currentPlayerName = "";
+    let currentStage = 1; // 1 to 6
+    let matchedPairsCount = 0;
+    let timeRemaining = TIME_LIMIT;
+    let timerInterval = null;
+    let startTime = 0;
+    let selectedCards = [];
+    let isProcessing = false;
+    let currentStagePairs = [];
+    let stageMatchedCount = 0;
+    let gameDatabasePairs = []; // Session-shuffled pairs
+
+    const STAGE_PAIR_COUNTS = [8, 8, 8, 8, 8, 6];
+
+    /* ==========================================
+       4. UTILS & SHUFFLE (Fisher-Yates)
+       ========================================== */
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    /* ==========================================
+       5. AUDIO SYNTHESIZER (Web Audio API)
+       ========================================== */
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playSound(type) {
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      const now = audioCtx.currentTime;
+
+      if (type === 'select') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.08);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+        osc.start(now);
+        osc.stop(now + 0.08);
+      } else if (type === 'match') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+        osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.28);
+        osc.start(now);
+        osc.stop(now + 0.28);
+      } else if (type === 'wrong') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.setValueAtTime(180, now + 0.1);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      } else if (type === 'count') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, now);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      } else if (type === 'go') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
+    }
+
+    /* ==========================================
+       6. NAVIGATION & CONTROLS
+       ========================================== */
+    window.onload = function() {
+      loadLeaderboard();
+    };
+
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    }
+
+    /* Precise Countdown Logic (Exact 1000ms steps) */
+    function startCountdown() {
+      const nameInput = document.getElementById('playerName').value.trim();
+      if (!nameInput) {
+        alert('이름을 입력해 주세요!');
+        document.getElementById('playerName').focus();
+        return;
+      }
+      currentPlayerName = nameInput;
+
+      const overlay = document.getElementById('countdownOverlay');
+      const countText = document.getElementById('countdownText');
+      overlay.classList.add('active');
+
+      const sequence = ['3', '2', '1', 'START!'];
+      let step = 0;
+
+      function displayStep() {
+        if (step < sequence.length) {
+          countText.innerText = sequence[step];
+          
+          // Re-trigger CSS animation cleanly
+          countText.classList.remove('countdown-anim');
+          void countText.offsetWidth; // trigger reflow
+          countText.classList.add('countdown-anim');
+
+          if (step < 3) {
+            playSound('count');
+          } else {
+            playSound('go');
+          }
+
+          step++;
+          setTimeout(displayStep, 1000); // Exact 1.0s interval
+        } else {
+          overlay.classList.remove('active');
+          countText.classList.remove('countdown-anim');
+          initGame();
+        }
+      }
+
+      displayStep();
+    }
+
+    /* ==========================================
+       7. GAME LOGIC
+       ========================================== */
+    function initGame() {
+      currentStage = 1;
+      matchedPairsCount = 0;
+      timeRemaining = TIME_LIMIT;
+      
+      // Shuffle all 46 database pairs randomly for this game session
+      gameDatabasePairs = shuffleArray([...HIRAGANA_DATABASE]);
+
+      showScreen('gameScreen');
+      updateHUD();
+
+      startStage(currentStage);
+
+      startTime = performance.now();
+      if (timerInterval) clearInterval(timerInterval);
+      
+      timerInterval = setInterval(() => {
+        const elapsedSec = (performance.now() - startTime) / 1000;
+        timeRemaining = Math.max(0, TIME_LIMIT - elapsedSec);
+        document.getElementById('hudTimer').innerText = timeRemaining.toFixed(2) + '초';
+
+        if (timeRemaining <= 0) {
+          endGame();
+        }
+      }, 30);
+    }
+
+    function startStage(stageNum) {
+      stageMatchedCount = 0;
+      selectedCards = [];
+      isProcessing = false;
+
+      // Determine starting index for stage pairs
+      let startIndex = 0;
+      for (let i = 0; i < stageNum - 1; i++) {
+        startIndex += STAGE_PAIR_COUNTS[i];
+      }
+      const pairCount = STAGE_PAIR_COUNTS[stageNum - 1];
+      currentStagePairs = gameDatabasePairs.slice(startIndex, startIndex + pairCount);
+
+      // Create card objects (Japanese + Korean)
+      let cardList = [];
+      currentStagePairs.forEach((pair, idx) => {
+        const pairId = startIndex + idx;
+        cardList.push({ id: `jp_${pairId}`, pairId: pairId, text: pair.jp, type: 'jp' });
+        cardList.push({ id: `kr_${pairId}`, pairId: pairId, text: pair.kr, type: 'kr' });
+      });
+
+      // Thoroughly shuffle card layout positions for this stage
+      shuffleArray(cardList);
+
+      // Render cards
+      const grid = document.getElementById('cardGrid');
+      grid.innerHTML = '';
+      
+      // Both 16 cards (4x4) and 12 cards (4x3) use 4 columns
+      grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+
+      cardList.forEach(cardData => {
+        const cardEl = document.createElement('div');
+        cardEl.className = `card ${cardData.type}`;
+        cardEl.dataset.pairId = cardData.pairId;
+        cardEl.dataset.cardId = cardData.id;
+        cardEl.innerText = cardData.text;
+
+        cardEl.onclick = () => handleCardClick(cardEl, cardData);
+        grid.appendChild(cardEl);
+      });
+
+      updateHUD();
+    }
+
+    function handleCardClick(cardEl, cardData) {
+      if (isProcessing) return;
+      if (cardEl.classList.contains('selected') || cardEl.classList.contains('matched')) return;
+
+      playSound('select');
+      cardEl.classList.add('selected');
+      selectedCards.push({ element: cardEl, data: cardData });
+
+      if (selectedCards.length === 2) {
+        isProcessing = true;
+        const [card1, card2] = selectedCards;
+
+        if (card1.data.pairId === card2.data.pairId) {
+          // MATCH!
+          playSound('match');
+          setTimeout(() => {
+            card1.element.classList.remove('selected');
+            card2.element.classList.remove('selected');
+            card1.element.classList.add('matched');
+            card2.element.classList.add('matched');
+
+            matchedPairsCount++;
+            stageMatchedCount++;
+            selectedCards = [];
+            isProcessing = false;
+            updateHUD();
+
+            // Check Stage Clear
+            if (stageMatchedCount === STAGE_PAIR_COUNTS[currentStage - 1]) {
+              if (currentStage < 6) {
+                currentStage++;
+                setTimeout(() => startStage(currentStage), 300);
+              } else {
+                // All 46 pairs matched!
+                endGame();
+              }
+            }
+          }, 200);
+        } else {
+          // MISMATCH!
+          playSound('wrong');
+          card1.element.classList.add('wrong');
+          card2.element.classList.add('wrong');
+
+          setTimeout(() => {
+            card1.element.classList.remove('selected', 'wrong');
+            card2.element.classList.remove('selected', 'wrong');
+            selectedCards = [];
+            isProcessing = false;
+          }, 500);
+        }
+      }
+    }
+
+    function updateHUD() {
+      document.getElementById('hudStage').innerText = `${currentStage} / 6`;
+      document.getElementById('hudScore').innerText = `${matchedPairsCount} / 46`;
+    }
+
+    function endGame() {
+      clearInterval(timerInterval);
+      const totalTimeUsed = Math.min(TIME_LIMIT, (performance.now() - startTime) / 1000);
+
+      document.getElementById('resultPlayerName').innerText = `${currentPlayerName} 님의 기록`;
+      document.getElementById('resultMatchedCount').innerText = `${matchedPairsCount}개`;
+      document.getElementById('resultTimeUsed').innerText = `${totalTimeUsed.toFixed(2)}초`;
+
+      saveRecord(currentPlayerName, matchedPairsCount, totalTimeUsed);
+      showScreen('resultScreen');
+    }
+
+    function resetToMain() {
+      showScreen('mainScreen');
+      loadLeaderboard();
+    }
+
+    /* ==========================================
+       8. LEADERBOARD & FIREBASE / LOCALSTORAGE
+       ========================================== */
+    function saveRecord(name, matchedCount, timeUsed) {
+      const record = {
+        name: name,
+        matchedCount: matchedCount,
+        timeUsed: parseFloat(timeUsed.toFixed(2)),
+        timestamp: Date.now()
+      };
+
+      if (isFirebaseReady) {
+        db.ref('rankings/' + name).set(record)
+          .then(() => loadLeaderboard())
+          .catch(err => {
+            console.error("Firebase save error, falling back to LocalStorage:", err);
+            saveToLocalStorage(record);
+          });
+      } else {
+        saveToLocalStorage(record);
+      }
+    }
+
+    function saveToLocalStorage(record) {
+      let rankings = JSON.parse(localStorage.getItem('hiragana_game_rankings') || '[]');
+      const existingIdx = rankings.findIndex(r => r.name === record.name);
+
+      if (existingIdx !== -1) {
+        rankings[existingIdx] = record; // Overwrite
+      } else {
+        rankings.push(record);
+      }
+
+      localStorage.setItem('hiragana_game_rankings', JSON.stringify(rankings));
+      loadLeaderboard();
+    }
+
+    function loadLeaderboard() {
+      if (isFirebaseReady) {
+        db.ref('rankings').once('value').then(snapshot => {
+          const data = snapshot.val();
+          let list = [];
+          if (data) {
+            list = Object.values(data);
+          }
+          renderLeaderboards(list);
+        }).catch(err => {
+          console.error("Firebase read error:", err);
+          loadFromLocalStorage();
+        });
+      } else {
+        loadFromLocalStorage();
+      }
+    }
+
+    function loadFromLocalStorage() {
+      const rankings = JSON.parse(localStorage.getItem('hiragana_game_rankings') || '[]');
+      renderLeaderboards(rankings);
+    }
+
+    function renderLeaderboards(list) {
+      // Sort: 1) Matched count descending, 2) Time used ascending
+      list.sort((a, b) => {
+        if (b.matchedCount !== a.matchedCount) {
+          return b.matchedCount - a.matchedCount;
+        }
+        return a.timeUsed - b.timeUsed;
+      });
+
+      // Render Main Screen Top 10
+      const mainTable = document.getElementById('mainRankingBody');
+      mainTable.innerHTML = '';
+      if (list.length === 0) {
+        mainTable.innerHTML = '<tr><td colspan="4">등록된 기록이 없습니다.</td></tr>';
+      } else {
+        list.slice(0, 10).forEach((item, index) => {
+          const rank = index + 1;
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><span class="rank-badge rank-${rank}">${rank}</span></td>
+            <td>${escapeHtml(item.name)}</td>
+            <td>${item.matchedCount}개</td>
+            <td>${item.timeUsed.toFixed(2)}초</td>
+          `;
+          mainTable.appendChild(tr);
+        });
+      }
+
+      // Render Result Screen Top 20
+      const resultTable = document.getElementById('resultRankingBody');
+      resultTable.innerHTML = '';
+      if (list.length === 0) {
+        resultTable.innerHTML = '<tr><td colspan="4">등록된 기록이 없습니다.</td></tr>';
+      } else {
+        list.slice(0, 20).forEach((item, index) => {
+          const rank = index + 1;
+          const tr = document.createElement('tr');
+          if (item.name === currentPlayerName) {
+            tr.className = 'my-score';
+          }
+          tr.innerHTML = `
+            <td><span class="rank-badge rank-${rank}">${rank}</span></td>
+            <td>${escapeHtml(item.name)}</td>
+            <td>${item.matchedCount}개</td>
+            <td>${item.timeUsed.toFixed(2)}초</td>
+          `;
+          resultTable.appendChild(tr);
+        });
+      }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+  </script>
+</body>
+</html>
