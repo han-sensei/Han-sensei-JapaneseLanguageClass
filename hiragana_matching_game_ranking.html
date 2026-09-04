@@ -5,15 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>누가누가 빠를까? 히라가나 짝 맞추기!</title>
   
-  <!-- Google Fonts for cute Korean typography -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jua&family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
   
-  <!-- Firebase SDK (v9) via CDN -->
-
+  <!-- Firebase SDK (Compat v10 버전 적용) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
   <style>
+    /* 기존 CSS 스타일 유지 */
     :root {
       --bg-color: #FFF9E6;
       --card-jp-bg: #E3F2FD;
@@ -53,7 +55,6 @@
       position: relative;
     }
 
-    /* 화면 하단 고정 희미한 워터마크 */
     .watermark-footer {
       position: fixed;
       bottom: 12px;
@@ -68,7 +69,6 @@
       letter-spacing: 1px;
     }
 
-    /* Screen Views */
     .screen {
       display: none;
       width: 100%;
@@ -89,7 +89,6 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Main Title */
     .game-title {
       font-size: 2.8rem;
       color: var(--primary-color);
@@ -99,7 +98,6 @@
       letter-spacing: 1px;
     }
 
-    /* Input & Buttons */
     .input-box {
       background: white;
       padding: 20px 30px;
@@ -164,7 +162,6 @@
       box-shadow: 0 2px 0px #0984E3;
     }
 
-    /* Leaderboard Card */
     .leaderboard-card {
       background: white;
       border-radius: 24px;
@@ -228,7 +225,6 @@
     .rank-2 { background: #C0C0C0; color: #FFF; text-shadow: 1px 1px 0 #708090; }
     .rank-3 { background: #CD7F32; color: #FFF; text-shadow: 1px 1px 0 #8B4513; }
 
-    /* HUD Bar for Game Screen */
     .hud-bar {
       width: 100%;
       max-width: 700px;
@@ -267,7 +263,6 @@
       letter-spacing: -1px;
     }
 
-    /* Cards Grid */
     .grid-container {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -338,7 +333,6 @@
       40%, 80% { transform: translateX(8px); }
     }
 
-    /* Countdown Modal */
     .countdown-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -371,7 +365,6 @@
       100% { transform: scale(0.9); opacity: 0.8; }
     }
 
-    /* Result Screen Specifics */
     .result-summary {
       background: white;
       border-radius: 24px;
@@ -404,7 +397,6 @@
       font-weight: bold;
     }
 
-    /* Responsive adjustment for tablets */
     @media (max-width: 600px) {
       .game-title { font-size: 2.1rem; }
       .grid-container { gap: 8px; }
@@ -414,21 +406,6 @@
   </style>
 </head>
 <body>
-  <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyBVs3qhWhQoUWmwzdMRZf7AHNp3g8e11fw",
-    authDomain: "jp-c833a.firebaseapp.com",
-    databaseURL: "https://jp-c833a-default-rtdb.firebaseio.com",
-    projectId: "jp-c833a",
-    storageBucket: "jp-c833a.firebasestorage.app",
-    messagingSenderId: "812699242278",
-    appId: "1:812699242278:web:b43cef481dde9450f77be7"
-  };
-
-  const app = initializeApp(firebaseConfig);
-</script>
 
   <!-- 1. Main Screen -->
   <div id="mainScreen" class="screen active">
@@ -452,7 +429,6 @@
           </tr>
         </thead>
         <tbody id="mainRankingBody">
-          <!-- Dynamically populated -->
         </tbody>
       </table>
     </div>
@@ -476,7 +452,6 @@
     </div>
 
     <div id="cardGrid" class="grid-container">
-      <!-- Cards rendered here -->
     </div>
   </div>
 
@@ -512,18 +487,15 @@
           </tr>
         </thead>
         <tbody id="resultRankingBody">
-          <!-- Dynamically populated -->
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- Countdown Overlay -->
   <div id="countdownOverlay" class="countdown-overlay">
     <div id="countdownText" class="countdown-number">3</div>
   </div>
 
-  <!-- 화면 하단 고정 워터마크 -->
   <div class="watermark-footer">Made by ハン先生</div>
 
   <script>
@@ -544,37 +516,38 @@
     ];
 
     /* ==========================================
-       2. FIREBASE CONFIGURATION (REPLACE WITH YOUR KEYS)
+       2. FIREBASE CONFIGURATION (정상 초기화 수정)
        ========================================== */
     const firebaseConfig = {
-     apiKey: "AIzaSyBVs3qhWhQoUWmwzdMRZf7AHNp3g8e11fw",
-     authDomain: "jp-c833a.firebaseapp.com",
-     databaseURL: "https://jp-c833a-default-rtdb.firebaseio.com",
-     projectId: "jp-c833a",
-     storageBucket: "jp-c833a.firebasestorage.app",
-     messagingSenderId: "812699242278",
-     appId: "1:812699242278:web:b43cef481dde9450f77be7"
-   };
+      apiKey: "AIzaSyBVs3qhWhQoUWmwzdMRZf7AHNp3g8e11fw",
+      authDomain: "jp-c833a.firebaseapp.com",
+      databaseURL: "https://jp-c833a-default-rtdb.firebaseio.com",
+      projectId: "jp-c833a",
+      storageBucket: "jp-c833a.firebasestorage.app",
+      messagingSenderId: "812699242278",
+      appId: "1:812699242278:web:b43cef481dde9450f77be7"
+    };
 
     let db = null;
     let isFirebaseReady = false;
 
     try {
-      if (firebaseConfig.apiKey !== "AIzaSyBVs3qhWhQoUWmwzdMRZf7AHNp3g8e11fw") {
+      if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
-        db = firebase.database();
-        isFirebaseReady = true;
       }
+      db = firebase.database();
+      isFirebaseReady = true;
+      console.log("Firebase가 정상 연결되었습니다.");
     } catch (e) {
-      console.warn("Firebase initialized in LocalStorage mode:", e);
+      console.warn("Firebase 연결 실패. LocalStorage 모드로 동작합니다:", e);
     }
 
     /* ==========================================
        3. GAME STATE VARIABLES
        ========================================== */
-    const TIME_LIMIT = 100.0; // 100 seconds limit
+    const TIME_LIMIT = 100.0;
     let currentPlayerName = "";
-    let currentStage = 1; // 1 to 6
+    let currentStage = 1;
     let matchedPairsCount = 0;
     let timeRemaining = TIME_LIMIT;
     let timerInterval = null;
@@ -583,12 +556,12 @@
     let isProcessing = false;
     let currentStagePairs = [];
     let stageMatchedCount = 0;
-    let gameDatabasePairs = []; // Session-shuffled pairs
+    let gameDatabasePairs = [];
 
     const STAGE_PAIR_COUNTS = [8, 8, 8, 8, 8, 6];
 
     /* ==========================================
-       4. UTILS & SHUFFLE (Fisher-Yates)
+       4. UTILS & SHUFFLE
        ========================================== */
     function shuffleArray(array) {
       for (let i = array.length - 1; i > 0; i--) {
@@ -599,7 +572,7 @@
     }
 
     /* ==========================================
-       5. AUDIO SYNTHESIZER (Web Audio API)
+       5. AUDIO SYNTHESIZER
        ========================================== */
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     
@@ -624,9 +597,9 @@
         osc.stop(now + 0.08);
       } else if (type === 'match') {
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(523.25, now); // C5
-        osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
-        osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.08);
+        osc.frequency.setValueAtTime(783.99, now + 0.16);
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.linearRampToValueAtTime(0.01, now + 0.28);
         osc.start(now);
@@ -668,7 +641,6 @@
       document.getElementById(screenId).classList.add('active');
     }
 
-    /* Precise Countdown Logic (Exact 1000ms steps) */
     function startCountdown() {
       const nameInput = document.getElementById('playerName').value.trim();
       if (!nameInput) {
@@ -688,10 +660,8 @@
       function displayStep() {
         if (step < sequence.length) {
           countText.innerText = sequence[step];
-          
-          // Re-trigger CSS animation cleanly
           countText.classList.remove('countdown-anim');
-          void countText.offsetWidth; // trigger reflow
+          void countText.offsetWidth;
           countText.classList.add('countdown-anim');
 
           if (step < 3) {
@@ -701,7 +671,7 @@
           }
 
           step++;
-          setTimeout(displayStep, 1000); // Exact 1.0s interval
+          setTimeout(displayStep, 1000);
         } else {
           overlay.classList.remove('active');
           countText.classList.remove('countdown-anim');
@@ -720,7 +690,6 @@
       matchedPairsCount = 0;
       timeRemaining = TIME_LIMIT;
       
-      // Shuffle all 46 database pairs randomly for this game session
       gameDatabasePairs = shuffleArray([...HIRAGANA_DATABASE]);
 
       showScreen('gameScreen');
@@ -747,7 +716,6 @@
       selectedCards = [];
       isProcessing = false;
 
-      // Determine starting index for stage pairs
       let startIndex = 0;
       for (let i = 0; i < stageNum - 1; i++) {
         startIndex += STAGE_PAIR_COUNTS[i];
@@ -755,7 +723,6 @@
       const pairCount = STAGE_PAIR_COUNTS[stageNum - 1];
       currentStagePairs = gameDatabasePairs.slice(startIndex, startIndex + pairCount);
 
-      // Create card objects (Japanese + Korean)
       let cardList = [];
       currentStagePairs.forEach((pair, idx) => {
         const pairId = startIndex + idx;
@@ -763,14 +730,10 @@
         cardList.push({ id: `kr_${pairId}`, pairId: pairId, text: pair.kr, type: 'kr' });
       });
 
-      // Thoroughly shuffle card layout positions for this stage
       shuffleArray(cardList);
 
-      // Render cards
       const grid = document.getElementById('cardGrid');
       grid.innerHTML = '';
-      
-      // Both 16 cards (4x4) and 12 cards (4x3) use 4 columns
       grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
 
       cardList.forEach(cardData => {
@@ -800,7 +763,6 @@
         const [card1, card2] = selectedCards;
 
         if (card1.data.pairId === card2.data.pairId) {
-          // MATCH!
           playSound('match');
           setTimeout(() => {
             card1.element.classList.remove('selected');
@@ -814,19 +776,16 @@
             isProcessing = false;
             updateHUD();
 
-            // Check Stage Clear
             if (stageMatchedCount === STAGE_PAIR_COUNTS[currentStage - 1]) {
               if (currentStage < 6) {
                 currentStage++;
                 setTimeout(() => startStage(currentStage), 300);
               } else {
-                // All 46 pairs matched!
                 endGame();
               }
             }
           }, 200);
         } else {
-          // MISMATCH!
           playSound('wrong');
           card1.element.classList.add('wrong');
           card2.element.classList.add('wrong');
@@ -864,7 +823,7 @@
     }
 
     /* ==========================================
-       8. LEADERBOARD & FIREBASE / LOCALSTORAGE
+       8. LEADERBOARD & FIREBASE
        ========================================== */
     function saveRecord(name, matchedCount, timeUsed) {
       const record = {
@@ -878,7 +837,7 @@
         db.ref('rankings/' + name).set(record)
           .then(() => loadLeaderboard())
           .catch(err => {
-            console.error("Firebase save error, falling back to LocalStorage:", err);
+            console.error("Firebase 저장 실패, LocalStorage로 백업합니다:", err);
             saveToLocalStorage(record);
           });
       } else {
@@ -891,7 +850,7 @@
       const existingIdx = rankings.findIndex(r => r.name === record.name);
 
       if (existingIdx !== -1) {
-        rankings[existingIdx] = record; // Overwrite
+        rankings[existingIdx] = record;
       } else {
         rankings.push(record);
       }
@@ -910,7 +869,7 @@
           }
           renderLeaderboards(list);
         }).catch(err => {
-          console.error("Firebase read error:", err);
+          console.error("Firebase 읽기 실패:", err);
           loadFromLocalStorage();
         });
       } else {
@@ -924,7 +883,6 @@
     }
 
     function renderLeaderboards(list) {
-      // Sort: 1) Matched count descending, 2) Time used ascending
       list.sort((a, b) => {
         if (b.matchedCount !== a.matchedCount) {
           return b.matchedCount - a.matchedCount;
@@ -932,7 +890,6 @@
         return a.timeUsed - b.timeUsed;
       });
 
-      // Render Main Screen Top 10
       const mainTable = document.getElementById('mainRankingBody');
       mainTable.innerHTML = '';
       if (list.length === 0) {
@@ -951,7 +908,6 @@
         });
       }
 
-      // Render Result Screen Top 20
       const resultTable = document.getElementById('resultRankingBody');
       resultTable.innerHTML = '';
       if (list.length === 0) {
