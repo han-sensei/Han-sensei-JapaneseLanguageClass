@@ -822,7 +822,7 @@
       loadLeaderboard();
     }
 
-    /* ==========================================
+/* ==========================================
        8. LEADERBOARD & FIREBASE
        ========================================== */
     function saveRecord(name, matchedCount, timeUsed) {
@@ -834,12 +834,32 @@
       };
 
       if (isFirebaseReady) {
-        db.ref('rankings/' + name).set(record)
-          .then(() => loadLeaderboard())
-          .catch(err => {
-            console.error("Firebase 저장 실패, LocalStorage로 백업합니다:", err);
-            saveToLocalStorage(record);
-          });
+        const userRef = db.ref('rankings/' + name);
+        
+        // 기존 기록 조회 후 비교
+        userRef.once('value').then(snapshot => {
+          const oldData = snapshot.val();
+          let shouldUpdate = true;
+
+          if (oldData) {
+            // 1) 맞춘 짝 수가 더 많거나
+            // 2) 맞춘 짝 수는 같으면서 소요시간이 더 단축된 경우에만 갱신
+            const isBetterScore = record.matchedCount > oldData.matchedCount;
+            const isFasterTime = (record.matchedCount === oldData.matchedCount) && (record.timeUsed < oldData.timeUsed);
+            
+            shouldUpdate = isBetterScore || isFasterTime;
+          }
+
+          if (shouldUpdate) {
+            userRef.set(record).then(() => loadLeaderboard());
+          } else {
+            // 더 좋은 기록이 아니면 덮어쓰지 않고 랭킹판만 새로고침
+            loadLeaderboard();
+          }
+        }).catch(err => {
+          console.error("Firebase 저장/조회 실패, LocalStorage로 백업합니다:", err);
+          saveToLocalStorage(record);
+        });
       } else {
         saveToLocalStorage(record);
       }
@@ -850,7 +870,14 @@
       const existingIdx = rankings.findIndex(r => r.name === record.name);
 
       if (existingIdx !== -1) {
-        rankings[existingIdx] = record;
+        const oldData = rankings[existingIdx];
+        const isBetterScore = record.matchedCount > oldData.matchedCount;
+        const isFasterTime = (record.matchedCount === oldData.matchedCount) && (record.timeUsed < oldData.timeUsed);
+
+        // 신규 기록이 더 우수한 경우에만 기존 데이터 덮어쓰기
+        if (isBetterScore || isFasterTime) {
+          rankings[existingIdx] = record;
+        }
       } else {
         rankings.push(record);
       }
