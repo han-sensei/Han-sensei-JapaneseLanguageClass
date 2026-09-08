@@ -15,17 +15,17 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
   <style>
-    /* 기존 CSS 스타일 유지 (빨간색 계열 -> 초록색 계열 변경) */
+    /* 기존 CSS 스타일 유지 (파란색 계열 -> 오렌지색 계열 변경) */
     :root {
       --bg-color: #FFF9E6;
-      --card-jp-bg: #E3F2FD;
-      --card-jp-border: #90CAF9;
-      --card-kr-bg: #F0FDF4;          /* 기존 분홍색(#FFF0F5) -> 파스텔 연초록 */
-      --card-kr-border: #86EFAC;      /* 기존 분홍 테두리(#FFB6C1) -> 연초록 테두리 */
+      --card-jp-bg: #FFF3E0;          /* 기존 연파랑(#E3F2FD) -> 파스텔 연오렌지 */
+      --card-jp-border: #FFB74D;      /* 기존 파랑 테두리(#90CAF9) -> 연오렌지 테두리 */
+      --card-kr-bg: #F0FDF4;          
+      --card-kr-border: #86EFAC;      
       --card-selected: #FFE082;
       --card-matched: #C8E6C9;
-      --primary-color: #16A34A;     /* 기존 메인 레드(#FF6B81) -> 선명한 초록색 */
-      --secondary-color: #4D96FF;
+      --primary-color: #16A34A;     
+      --secondary-color: #FF8C00;    /* 기존 보조 블루(#4D96FF) -> 비비드 오렌지 */
       --accent-color: #FFD93D;
       --text-color: #2D3436;
       --shadow-color: rgba(0, 0, 0, 0.1);
@@ -130,7 +130,7 @@
 
     .name-input:focus {
       border-color: var(--primary-color);
-      box-shadow: 0 0 10px rgba(22, 163, 74, 0.3); /* 기존 레드 번짐 효과 -> 그린 번짐 효과 */
+      box-shadow: 0 0 10px rgba(22, 163, 74, 0.3);
     }
 
     .btn {
@@ -141,7 +141,7 @@
       font-size: 1.5rem;
       border-radius: 50px;
       cursor: pointer;
-      box-shadow: 0 6px 0px #15803D; /* 기존 레드 그림자(#D63031) -> 다크 그린 입체 그림자 */
+      box-shadow: 0 6px 0px #15803D;
       transition: all 0.1s;
       display: inline-flex;
       align-items: center;
@@ -150,16 +150,16 @@
 
     .btn:active {
       transform: translateY(4px);
-      box-shadow: 0 2px 0px #15803D; /* 눌림 상태 다크 그린 그림자 */
+      box-shadow: 0 2px 0px #15803D;
     }
 
     .btn-secondary {
       background: var(--secondary-color);
-      box-shadow: 0 6px 0px #0984E3;
+      box-shadow: 0 6px 0px #E65100; /* 기존 블루 그림자(#0984E3) -> 딥 오렌지 그림자 */
     }
 
     .btn-secondary:active {
-      box-shadow: 0 2px 0px #0984E3;
+      box-shadow: 0 2px 0px #E65100; /* 눌림 상태 딥 오렌지 그림자 */
     }
 
     .leaderboard-card {
@@ -170,7 +170,7 @@
       max-width: 550px;
       margin-top: 25px;
       box-shadow: 0 10px 25px var(--shadow-color);
-      border: 4px solid #E1F5FE;
+      border: 4px solid #FFE0B2; /* 기존 블루 테두리(#E1F5FE) -> 연오렌지 테두리 */
     }
 
     .leaderboard-title {
@@ -191,10 +191,10 @@
     }
 
     .ranking-table th {
-      background: #E3F2FD;
+      background: #FFF3E0; /* 기존 연파랑(#E3F2FD) -> 연오렌지 */
       padding: 10px;
       font-size: 1.1rem;
-      color: #1976D2;
+      color: #E65100;      /* 기존 딥 블루(#1976D2) -> 딥 오렌지 */
       border-radius: 10px;
     }
 
@@ -292,13 +292,13 @@
     .card.jp {
       background-color: var(--card-jp-bg);
       border-color: var(--card-jp-border);
-      color: #0D47A1;
+      color: #E65100;                  /* 기존 다크 블루 글자색(#0D47A1) -> 딥 오렌지 */
     }
 
     .card.kr {
       background-color: var(--card-kr-bg);
       border-color: var(--card-kr-border);
-      color: #15803D;                  /* 기존 다크 핑크 글자색(#C2185B) -> 다크 그린 */
+      color: #15803D;                  
     }
 
     .card:active {
